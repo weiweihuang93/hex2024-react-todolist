@@ -25,6 +25,9 @@ function App() {
   const [todos, setTodos] = useState([]);
   const [newTodo, setNewTodo] = useState('');
 
+  // 編輯資料
+  const [editTodo, setEditTodo] = useState({});
+
   // 註冊
   const signUp = (e) => {
     e.preventDefault();
@@ -89,7 +92,7 @@ function App() {
       headers: { Authorization: token }
     })
     .then((res) => {
-      setTodos(res.data.data)
+      setTodos(res.data.data.map(todo => ({...todo, isEditing: false})))
     })
     .catch((err) => alert('取得資料失敗'))
   }
@@ -101,9 +104,39 @@ function App() {
     })
     .then((res) => {
       alert('刪除成功');
-      setTodos((prevTodos) => prevTodos.filter((item => item.id !== id)))  // 使用過濾條件，排除掉被刪除的代辦事項
+      getTodos();
     })
     .catch((err) => alert('刪除失敗'))
+  }
+
+  // 編輯
+  const editTodoId = (id) => {
+    setTodos(todos.map(todo => todo.id === id ? { ...todo, isEditing: true} : todo ))
+  };
+
+  // 取消編輯
+  const cancelEditTodoId = (id) => {
+    setTodos(todos.map(todo => todo.id === id ? { ...todo, isEditing: false} : todo ))
+  };
+
+  // 編輯輸入框改變處理
+  const onEditInputChange = (event, id) => {
+    setEditTodo({
+      ...editTodo,
+      [id]: event.target.value,
+    })
+  }
+
+  // 保存
+  const saveTodo = (id, value) => {
+    const todo = { "content": value };
+    axios.put(`${api}/todos/${id}`, todo, {
+      headers: { Authorization: token }
+    })
+    .then((res) => {
+      getTodos();
+    })
+    .catch((err) => alert('更新資料失敗'))
   }
 
   return(
@@ -207,14 +240,35 @@ function App() {
       <h2>取得資料</h2>
       <ul>
         {todos.map((item) => (
-          <li key={item.id} className="mt-3 ms-1">
-            {item.content}
-            <button
-              onClick={() => deleteTodo(item.id)}
-              type="button"
-              className="btn btn-danger ms-2">刪除</button>
-          </li>
-        ))}
+          <li key={item.id} className="mt-3 ms-1">{item.content}
+            {item.isEditing ? (
+            <>
+              <input
+                value={editTodo[item.id] || item.content}
+                onChange={(e) => onEditInputChange(e, item.id)}
+                type="text" />
+              <button 
+                onClick={() => saveTodo(item.id, editTodo[item.id] || item.content)}
+                type="button"
+                className="btn btn-primary ms-1">保存</button>
+              <button 
+                  onClick={() => cancelEditTodoId(item.id)}
+                  type="button"
+                  className="btn btn-danger ms-1">取消編輯</button>
+            </>
+            ) : (
+            <>
+              <button
+                onClick={() => editTodoId(item.id)}
+                type="button"
+                className="btn btn-secondary ms-1">編輯</button>
+                <button
+                  onClick={() => deleteTodo(item.id)}
+                  type="button"
+                  className="btn btn-danger ms-1">刪除</button>
+              </>)}
+            </li>)
+        )}
       </ul>
 
     </div>
